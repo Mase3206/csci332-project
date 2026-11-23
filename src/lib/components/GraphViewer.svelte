@@ -461,12 +461,12 @@
     <hr />
 
     <h2>Preprocessing</h2>
-    <Button onclick={togglePreprocessing}>{preprocessing ? 'Stop' : dfsStepIndex >= 0 ? 'Resume' : 'Start'}</Button>
+    <Button onclick={togglePreprocessing} class="w-full">{preprocessing ? 'Stop' : dfsStepIndex >= 0 ? 'Resume' : 'Start'}</Button>
     <div class="flex">
-      <Button onclick={previousDfsStep} disabled={!preprocessing || dfsStepIndex <= 0}>Prev</Button>
-      <Button onclick={nextDfsStep} disabled={!preprocessing || dfsStepIndex >= dfsSteps.length - 1}>Next</Button>
+      <Button onclick={previousDfsStep} disabled={!preprocessing || dfsStepIndex <= 0} class="mr-2 grow">Prev</Button>
+      <Button onclick={nextDfsStep} disabled={!preprocessing || dfsStepIndex >= dfsSteps.length - 1} class="grow">Next</Button>
     </div>
-    <Button onclick={clearDfs} disabled={!dfsSteps.length && dfsStepIndex < 0}>Clear ordering</Button>
+    <Button onclick={clearDfs} disabled={!dfsSteps.length && dfsStepIndex < 0} class="w-full">Clear ordering</Button>
     {#if preprocessing}
       <p><span class="font-bold">Step:</span> {dfsStepLabel}</p>
       {#if backtrackFrom && backtrackTo}
@@ -519,7 +519,7 @@
         ]}
         role="button"
         tabindex="0"
-        style="left: {position.x}px; top: {position.y}px; width: {diameter}px; height: {diameter}px; {dragging?.node == node ? 'background-color: red;' : ''}"
+        style="left: {position.x}px; top: {position.y}px; width: {diameter}px; height: {diameter}px; {dragging?.node == node ? 'background-color: #ffaeae;' : ''}"
         onpointerdown={(event) => startDrag(event, node)}
         onpointermove={dragNode}
         onpointerup={stopDrag}
