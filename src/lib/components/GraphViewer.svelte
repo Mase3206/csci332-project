@@ -1,11 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { DirectedNode, DirectedGraph, defaultGraph } from "#lib/graphs.svelte.ts";
-  import { Range, Label } from "flowbite-svelte";
+  import { DirectedNode, DirectedGraph, defaultGraph, type DfsStep } from "#lib/graphs.svelte.ts";
+  import { Range, Label, Button } from "flowbite-svelte";
 
   let graph: DirectedGraph = $state(defaultGraph());
   let nodes: Array<DirectedNode> = $derived(graph.nodes);
   let diameter = $state(60);
+  
+  // region Node movement
   let areaElement: HTMLDivElement | undefined = $state();
   let dragging: { node: DirectedNode; offsetX: number; offsetY: number } | null = $state(null);
   let hovering: DirectedNode | null = $state(null);
@@ -231,6 +233,103 @@
   function offHover(node: DirectedNode) {
     hovering = null;
   }
+  // endregion Node movement
+
+
+
+  // region Preprocess
+
+  let preprocessing = $state(false);
+  let dfsSteps = $state<Array<DfsStep>>([]);
+  let dfsStepIndex = $state(-1);
+  let activeDfsNode = $state<string | null>(null);
+  let activeDfsPath = $state<Array<string>>([]);
+  let backtrackFrom = $state<string | null>(null);
+  let backtrackTo = $state<string | null>(null);
+  let siblingFrom = $state<string | null>(null);
+  let sharedRoot = $state<string | null>(null);
+  let dfsStepLabel = $state("");
+
+  function applyDfsStep(index: number): void {
+    const step = dfsSteps[index];
+    if (!step) return;
+
+    dfsStepIndex = index;
+    dfsStepLabel = step.label;
+    activeDfsNode = step.activeNode;
+    activeDfsPath = step.path;
+    backtrackFrom = step.backtrackFrom;
+    backtrackTo = step.backtrackTo;
+    siblingFrom = step.siblingFrom;
+    sharedRoot = step.sharedRoot;
+    graph.clock = step.clock;
+
+    for (const node of nodes) {
+      node.visited = step.visited.includes(node.name);
+      node.pre = step.pre[node.name] ?? -1;
+      node.post = step.post[node.name] ?? -1;
+    }
+  }
+
+  function resetDfs(): void {
+    graph.clock = 0;
+    for (const node of nodes) {
+      node.visited = false;
+      node.pre = -1;
+      node.post = -1;
+    }
+  }
+
+  function togglePreprocessing(): void {
+    if (!preprocessing) {
+      preprocessing = true;
+
+      if (dfsSteps.length === 0 || dfsStepIndex < 0) {
+      resetDfs();
+      dfsSteps = graph.buildDfsSteps();
+      applyDfsStep(0);
+      } else {
+        applyDfsStep(dfsStepIndex);
+      }
+    } else {
+      preprocessing = false;
+    }
+  }
+
+  function clearDfs(): void {
+    preprocessing = false;
+    dfsStepIndex = -1;
+    dfsStepLabel = "";
+    activeDfsNode = null;
+    activeDfsPath = [];
+    backtrackFrom = null;
+    backtrackTo = null;
+    siblingFrom = null;
+    sharedRoot = null;
+    dfsSteps = [];
+    resetDfs();
+  }
+
+  function previousDfsStep(): void {
+    if (dfsStepIndex > 0) applyDfsStep(dfsStepIndex - 1);
+  }
+
+  function nextDfsStep(): void {
+    if (dfsStepIndex >= 0 && dfsStepIndex < dfsSteps.length - 1) {
+      applyDfsStep(dfsStepIndex + 1);
+    }
+  }
+
+  function isDfsEdge(source: DirectedNode, target: DirectedNode): boolean {
+    for (let index = 0; index < activeDfsPath.length - 1; index++) {
+      if (activeDfsPath[index] === source.name && activeDfsPath[index + 1] === target.name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // endregion
 </script>
 
 <style>
@@ -240,7 +339,7 @@
     height: 100vh;
     /* height: 100%; */
     /* flex: 1; */
-    * {
+    &>* {
       margin: 8px;
     }
   }
@@ -250,6 +349,13 @@
     border: 2px solid black;
     border-radius: 8px;
     padding: 16px;
+
+    >:global(*) {
+      margin-bottom: 8px;
+    }
+    h2 {
+      font-weight: bold;
+    }
   }
 
   .area {
@@ -277,6 +383,7 @@
     padding: 4px;
     background-color: lightblue;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: grab;
@@ -291,21 +398,84 @@
     }
   }
 
+  .dfs-active {
+    outline: 4px solid orange;
+  }
+
+  .dfs-backtrack-from {
+    outline: 4px dashed crimson;
+  }
+
+  .dfs-backtrack-to {
+    outline: 4px solid crimson;
+  }
+
+  .dfs-sibling {
+    outline: 4px solid purple;
+  }
+
+  .dfs-arrow {
+    stroke: orange;
+    stroke-width: 4px;
+  }
+
+  .backtrack-label {
+    color: crimson;
+    font-weight: bold;
+  }
+
+  .sibling-label {
+    color: purple;
+    font-weight: bold;
+  }
+
   .coordinates {
     font-family: monospace;
+  }
+
+  hr {
+    margin: 16px 0px !important;
+  }
+
+  .order {
+    display: flex;
+    flex-direction: row;
+  }
+  .order-pre {
+    color: red;
+    font-size: 12px;
+    margin-right: 12px;
+  }
+  .order-post {
+    color: green;
+    font-size: 12px;
   }
 </style>
 
 <div class="viewer">
   <div class="toolbar">
-    <!-- <Alert>
-      <span class="font-medium">Info alert!</span>
-      Change a few things up and try submitting again.
-    </Alert> -->
-
+    <h2>Settings</h2>
     <Label>Node diameter: {diameter}</Label>
     <Range id="nodeDiameter" min=40 max=100 bind:value={diameter} />
-    <!-- <p>Value: {diameter}</p> -->
+    
+    <hr />
+
+    <h2>Preprocessing</h2>
+    <Button onclick={togglePreprocessing}>{preprocessing ? 'Stop' : dfsStepIndex >= 0 ? 'Resume' : 'Start'}</Button>
+    <div class="flex">
+      <Button onclick={previousDfsStep} disabled={!preprocessing || dfsStepIndex <= 0}>Prev</Button>
+      <Button onclick={nextDfsStep} disabled={!preprocessing || dfsStepIndex >= dfsSteps.length - 1}>Next</Button>
+    </div>
+    <Button onclick={clearDfs} disabled={!dfsSteps.length && dfsStepIndex < 0}>Clear ordering</Button>
+    {#if preprocessing}
+      <p><span class="font-bold">Step:</span> {dfsStepLabel}</p>
+      {#if backtrackFrom && backtrackTo}
+        <p class="backtrack-label">Backtracking {backtrackFrom} &rarr; {backtrackTo} (return to parent)</p>
+      {/if}
+      {#if siblingFrom && sharedRoot}
+        <p class="sibling-label">{siblingFrom} and {activeDfsNode} share root {sharedRoot}</p>
+      {/if}
+    {/if}
   </div>
 
 
@@ -316,17 +486,22 @@
         <marker id="dag-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="black"></path>
         </marker>
+        <marker id="dfs-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="orange"></path>
+        </marker>
       </defs>
       {#each edges as edge (edge)}
         {const points = $derived(edgePoint(edge.source, edge.target))}
+        {const dfsEdge = $derived(isDfsEdge(edge.source, edge.target))}
         <line
+          class={dfsEdge ? "dfs-arrow" : ""}
           x1={points.x1}
           y1={points.y1}
           x2={points.x2}
           y2={points.y2}
-          stroke="black"
+          stroke={dfsEdge ? "orange" : "black"}
           stroke-width="2"
-          marker-end="url(#dag-arrow)"
+          marker-end={dfsEdge ? "url(#dfs-arrow)" : "url(#dag-arrow)"}
         ></line>
       {/each}
     </svg>
@@ -335,7 +510,13 @@
     {#each nodes as node (node)}
       {const position = $derived(positionOf(node))}
       <div
-        class="graph-node"
+        class={[
+          "graph-node",
+          activeDfsNode === node.name ? "dfs-active" : "",
+          backtrackFrom === node.name ? "dfs-backtrack-from" : "",
+          backtrackTo === node.name ? "dfs-backtrack-to" : "",
+          siblingFrom && activeDfsNode === node.name ? "dfs-sibling" : ""
+        ]}
         role="button"
         tabindex="0"
         style="left: {position.x}px; top: {position.y}px; width: {diameter}px; height: {diameter}px; {dragging?.node == node ? 'background-color: red;' : ''}"
@@ -349,7 +530,18 @@
         onmouseout={() => offHover(node)}
         onblur={() => offHover(node)}
       >
-        {node.name}
+        <p>
+          {node.name}
+        </p>
+
+        <div class="order">
+          {#if node.pre >= 0}
+            <p class="order-pre">{node.pre}</p>
+          {/if}
+          {#if node.post >= 0}
+            <p class="order-post">{node.post}</p> 
+          {/if}
+        </div>
       </div>
     {/each}
 

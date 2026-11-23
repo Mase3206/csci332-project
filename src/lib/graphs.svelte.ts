@@ -1,5 +1,3 @@
-import { Stack } from '#lib/dataStructures.ts';
-
 export class DirectedNode {
     public neighbors: Array<DirectedNode> = $state(new Array<DirectedNode>());
     public pre: number = $state(-1);
@@ -30,33 +28,157 @@ export class DirectedNode {
 }
 
 
+export type DfsStep = {
+    label: string;
+    clock: number;
+    activeNode: string | null;
+    path: Array<string>;
+    backtrackFrom: string | null;
+    backtrackTo: string | null;
+    siblingFrom: string | null;
+    sharedRoot: string | null;
+    pre: Record<string, number>;
+    post: Record<string, number>;
+    visited: Array<string>;
+};
+
+
 export class DirectedGraph {
     public nodes: Array<DirectedNode>;  // This becomes a Svelte $state().
     public clock: number = $state(0);
-
+    
+    
     get headNode(): DirectedNode {
         return this.nodes[0];
     }
-
+    
     constructor(nodes: Array<DirectedNode>) {
         this.nodes = $state(nodes);
+        this.clock = 0;
+    }
+    
+    dfs(v: DirectedNode): void {
+        this.clock = 0;
+        for (const node of this.nodes) {
+            node.visited = false;
+            node.pre = -1;
+            node.post = -1;
+        }
+        this.dfsRecursive(v);
     }
 
-    dfs(v: DirectedNode): void {
-        // let stack = new Stack<DirectedNode>();
-        this.clock = 0;
+    private dfsRecursive(v: DirectedNode): void {
+        if (v.visited) return;
 
         v.visited = true;
         this.clock++;
         v.pre = this.clock;
-
+        
         v.neighbors.forEach(neighbor => {
-            this.dfs(neighbor);
-            this.clock++;
-            v.post = this.clock;
-        })
+            if (!neighbor.visited) this.dfsRecursive(neighbor);
+        });
+
+        this.clock++;
+        v.post = this.clock;
+    }
+
+    dfsAll(): void {
+        this.clock = 0;
+        for (const node of this.nodes) {
+            node.visited = false;
+            node.pre = -1;
+            node.post = -1;
+        }
+
+        for (const node of this.nodes) {
+            if (!node.visited) this.dfsRecursive(node);
+        }
+    }
+
+    buildDfsSteps(): Array<DfsStep> {
+        const pre: Record<string, number> = {};
+        const post: Record<string, number> = {};
+        const visited = new Set<string>();
+        const steps: Array<DfsStep> = [];
+        const callStack: Array<string> = [];
+        let clock = 0;
+
+        const snapshot = (
+            label: string,
+            activeNode: string | null,
+            backtrackFrom: string | null = null,
+            backtrackTo: string | null = null
+        ): void => {
+            steps.push({
+                label,
+                clock,
+                activeNode,
+                path: [...callStack],
+                backtrackFrom,
+                backtrackTo,
+                siblingFrom: null,
+                sharedRoot: null,
+                pre: { ...pre },
+                post: { ...post },
+                visited: [...visited]
+            });
+        };
+
+        for (const node of this.nodes) {
+            pre[node.name] = -1;
+            post[node.name] = -1;
+        }
+        snapshot("Before depth-first search", null);
+
+        const visit = (
+            node: DirectedNode,
+            siblingFrom: string | null = null,
+            sharedRoot: string | null = null
+        ): void => {
+            if (visited.has(node.name)) return;
+
+            visited.add(node.name);
+            clock++;
+            pre[node.name] = clock;
+            callStack.push(node.name);
+            snapshot(`Preprocess ${node.name}`, node.name);
+            if (siblingFrom && sharedRoot) {
+                steps[steps.length - 1].siblingFrom = siblingFrom;
+                steps[steps.length - 1].sharedRoot = sharedRoot;
+                steps[steps.length - 1].label =
+                    `Preprocess ${node.name} (sibling of ${siblingFrom}; share root ${sharedRoot})`;
+            }
+
+            for (let index = 0; index < node.neighbors.length; index++) {
+                const neighbor = node.neighbors[index];
+                if (!visited.has(neighbor.name)) {
+                    const earlierNeighbor = node.neighbors
+                        .slice(0, index)
+                        .find((candidate) => visited.has(candidate.name));
+                    visit(neighbor, earlierNeighbor?.name ?? null, earlierNeighbor ? node.name : null);
+                }
+            }
+
+            clock++;
+            post[node.name] = clock;
+            snapshot(`Postprocess ${node.name}`, node.name);
+            callStack.pop();
+
+            if (callStack.length > 0) {
+                const parent = callStack[callStack.length - 1];
+                snapshot(`Backtrack ${node.name} \u2192 ${parent}`, parent, node.name, parent);
+            }
+        };
+
+        for (const node of this.nodes) {
+            if (!visited.has(node.name)) visit(node);
+        }
+
+        return steps;
     }
 }
+
+
 
 
 export function defaultGraph(): DirectedGraph {
