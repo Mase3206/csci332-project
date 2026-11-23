@@ -1,4 +1,4 @@
-# sv
+<!-- # sv
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
@@ -51,4 +51,10 @@ To create a production version of your app:
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
+You can preview the production build with `npm run preview`. -->
+
+# Topo Sort Visualizer
+
+This tool demonstrates how the DFS post order can be directly used to create the topological sort of a directed acyclical graph.
+
+Click "Start" to begin preprocessing. Check "Sort topologically" to topo sort the graph live as the post-order is being determined.

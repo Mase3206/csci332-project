@@ -816,7 +816,7 @@
     }
   }
   .toolbar {
-    width: 15%;
+    width: 20%;
     /* height: 100%; */
     border: 2px solid black;
     border-radius: 8px;
