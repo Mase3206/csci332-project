@@ -1,0 +1,8 @@
+{
+	"files.associations": {
+		"*.css": "tailwindcss"
+	},
+	"[svelte]": {
+		"editor.tabSize": 2,
+	}
+}
