@@ -467,15 +467,27 @@
       <Button onclick={nextDfsStep} disabled={!preprocessing || dfsStepIndex >= dfsSteps.length - 1} class="grow">Next</Button>
     </div>
     <Button onclick={clearDfs} disabled={!dfsSteps.length && dfsStepIndex < 0} class="w-full">Clear ordering</Button>
-    {#if preprocessing}
-      <p><span class="font-bold">Step:</span> {dfsStepLabel}</p>
-      {#if backtrackFrom && backtrackTo}
-        <p class="backtrack-label">Backtracking {backtrackFrom} &rarr; {backtrackTo} (return to parent)</p>
+    <div class="min-h-18">
+      {#if preprocessing}
+        <p><span class="font-bold">Step:</span> {dfsStepLabel}</p>
+        {#if backtrackFrom && backtrackTo}
+          <p class="backtrack-label">Backtracking {backtrackFrom} &rarr; {backtrackTo} (return to parent)</p>
+        {/if}
+        {#if siblingFrom && sharedRoot}
+          <p class="sibling-label">{siblingFrom} and {activeDfsNode} share root {sharedRoot}</p>
+        {/if}
       {/if}
-      {#if siblingFrom && sharedRoot}
-        <p class="sibling-label">{siblingFrom} and {activeDfsNode} share root {sharedRoot}</p>
-      {/if}
-    {/if}
+    </div>
+
+    <hr />
+
+    <h2>Topological sorting</h2>
+    <Button onclick={() => {alert("farts")}} class="w-full">Topologize</Button>
+    <div class="flex">
+      <Button onclick={() => {}} class="mr-2 grow">Prev</Button>
+      <Button onclick={() => {}} class="grow">Next</Button>
+    </div>
+    <Button onclick={() => {}} class="w-full">Reset topo sort</Button>
   </div>
 
 
