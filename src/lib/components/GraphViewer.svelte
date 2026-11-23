@@ -8,6 +8,7 @@
   let diameter = $state(60);
   let areaElement: HTMLDivElement | undefined = $state();
   let dragging: { node: DirectedNode; offsetX: number; offsetY: number } | null = $state(null);
+  let hovering: DirectedNode | null = $state(null);
   let hasUserPositioned = false;
   let positions = $state<Record<string, { x: number; y: number }>>(
     Object.fromEntries(
@@ -222,6 +223,14 @@
     return () => resizeObserver.disconnect();
   });
 
+
+  function onHover(node: DirectedNode) {
+    hovering = node;
+  }
+
+  function offHover(node: DirectedNode) {
+    hovering = null;
+  }
 </script>
 
 <style>
@@ -274,10 +283,16 @@
     user-select: none;
     touch-action: none;
     z-index: 2;
+    &:active {
+      cursor: grabbing;
+    }
+    &:hover {
+      background: lightgreen;
+    }
   }
 
-  .graph-node:active {
-    cursor: grabbing;
+  .coordinates {
+    font-family: monospace;
   }
 </style>
 
@@ -295,6 +310,7 @@
 
 
   <div class="area" bind:this={areaElement}>
+    <!-- Arrows -->
     <svg class="edges" aria-hidden="true">
       <defs>
         <marker id="dag-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
@@ -302,7 +318,7 @@
         </marker>
       </defs>
       {#each edges as edge (edge)}
-        {@const points = edgePoint(edge.source, edge.target)}
+        {const points = $derived(edgePoint(edge.source, edge.target))}
         <line
           x1={points.x1}
           y1={points.y1}
@@ -315,23 +331,37 @@
       {/each}
     </svg>
 
+    <!-- Nodes -->
     {#each nodes as node (node)}
-      {@const position = positionOf(node)}
+      {const position = $derived(positionOf(node))}
       <div
         class="graph-node"
         role="button"
         tabindex="0"
-        style="left: {position.x}px; top: {position.y}px; width: {diameter}px; height: {diameter}px;"
+        style="left: {position.x}px; top: {position.y}px; width: {diameter}px; height: {diameter}px; {dragging?.node == node ? 'background-color: red;' : ''}"
         onpointerdown={(event) => startDrag(event, node)}
         onpointermove={dragNode}
         onpointerup={stopDrag}
         onpointercancel={stopDrag}
         onkeydown={(event) => moveNodeWithKeyboard(event, node)}
+        onmouseover={() => onHover(node)}
+        onfocus={() => onHover(node)}
+        onmouseout={() => offHover(node)}
+        onblur={() => offHover(node)}
       >
         {node.name}
       </div>
     {/each}
+
+    <!-- Node coordinates (if hover or drag) -->
+    <div class="coordinates">
+      {#if dragging != null}
+        {let pos = $derived(positionOf(dragging.node))}
+        {Math.floor(pos.x)} x {Math.floor(pos.y)}
+      {:else if hovering != null}
+        {let pos = $derived(positionOf(hovering))}
+        {Math.floor(pos.x)} x {Math.floor(pos.y)}
+      {/if}
+    </div>
   </div>
 </div>
-
-<!-- <GraphNode name='wow' /> -->

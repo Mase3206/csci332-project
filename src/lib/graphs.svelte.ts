@@ -55,23 +55,6 @@ export class DirectedGraph {
             this.clock++;
             v.post = this.clock;
         })
-
-        // v.neighbors.forEach(neighbor => {
-        //     stack.push(neighbor)
-        // });
-
-        // while (!stack.isEmpty()) {
-
-            // if (stack.peek()!.prev != null) {
-            //     let w: DirectedNode = stack.peek()!.prev!.data;
-            //     if (!w.visited) {
-            //         w.visited = true;
-            //         w.neighbors.forEach(n => {
-            //             stack.push(n)
-            //         });
-            //     }
-            // }
-        // }
     }
 }
 
