@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { DirectedNode, DirectedGraph, defaultGraph, type DfsStep } from "#lib/graphs.svelte.ts";
-  import { Range, Label, Button } from "flowbite-svelte";
+  import { Range, Label, Button, Checkbox } from "flowbite-svelte";
 
   let graph: DirectedGraph = $state(defaultGraph());
   let nodes: Array<DirectedNode> = $derived(graph.nodes);
@@ -467,6 +467,7 @@
       <Button onclick={nextDfsStep} disabled={!preprocessing || dfsStepIndex >= dfsSteps.length - 1} class="grow">Next</Button>
     </div>
     <Button onclick={clearDfs} disabled={!dfsSteps.length && dfsStepIndex < 0} class="w-full">Clear ordering</Button>
+    <Checkbox>Sort topologically</Checkbox>
     <div class="min-h-18">
       {#if preprocessing}
         <p><span class="font-bold">Step:</span> {dfsStepLabel}</p>
@@ -478,16 +479,6 @@
         {/if}
       {/if}
     </div>
-
-    <hr />
-
-    <h2>Topological sorting</h2>
-    <Button onclick={() => {alert("farts")}} class="w-full">Topologize</Button>
-    <div class="flex">
-      <Button onclick={() => {}} class="mr-2 grow">Prev</Button>
-      <Button onclick={() => {}} class="grow">Next</Button>
-    </div>
-    <Button onclick={() => {}} class="w-full">Reset topo sort</Button>
   </div>
 
 
